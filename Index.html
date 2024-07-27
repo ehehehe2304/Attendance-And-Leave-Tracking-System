@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+</head>
+<body>
+  <h1>Setup Leave Application System</h1>
+  <p>Leave Application System will include a Leave Application Google Form and a Google Sheet.</p>
+  <p>CLICK THE BUTTON TO START.</p>
+  <input type="button" value="START SETUP" onclick="setupSystem()">
+  <div id="result"></div>
+  <br>
+  <script>
+    function setupSystem() {
+      // Display message indicating setup is in progress
+      document.getElementById('result').innerText = 'Setting up the system, please wait...... (Around 20 seconds)';
+
+      // Calls the setupFolder function defined in the Apps Script
+      google.script.run.withSuccessHandler(handleSetupResult).withFailureHandler(handleError).setupFolder();
+    }
+
+    function handleSetupResult(result) {
+      console.log('Received result:', result); // Log the result to check its contents
+
+      if (result && result.folderurl && result.leaveSheetId && result.atdSheetId) {
+        const folderUrl = result.folderurl;
+        const leaveSheetId = result.leaveSheetId;
+        const atdSheetId = result.atdSheetId;
+
+        document.getElementById('result').innerHTML = `
+          <p>Folder and files have been created in your Google Drive.</p>
+          <p><a href="${folderUrl}" target="_blank">Click here to access the folder</a></p>
+        `;
+
+        console.log('Leave Sheet ID:', leaveSheetId);
+        console.log('ATD Sheet ID:', atdSheetId);
+
+        // Chain function calls
+        google.script.run.withSuccessHandler(function() {
+          console.log('formatSheet completed');
+          google.script.run.withSuccessHandler(function() {
+            console.log('formatATDSheet completed');
+            google.script.run.withSuccessHandler(function() {
+              console.log('applyConditionalFormatting completed');
+              google.script.run.withSuccessHandler(function() {
+                console.log('createFormSubmitTrigger completed');
+                google.script.run.createTimeDrivenTrigger(atdSheetId);
+              }).createTrigger(leaveSheetId);
+            }).applyConditionalFormatting(leaveSheetId);
+          }).formatATDSheet(atdSheetId);
+        }).formatLeaveSheet(leaveSheetId);
+      } else {
+        document.getElementById('result').innerText += ' Error: Sheet ID or folder URL is missing.';
+      }
+    }
+
+    function handleError(error) {
+      console.error('Error occurred:', error);
+      document.getElementById('result').innerText = 'An error occurred during setup. Check the console for details.';
+    }
+  </script>
+</body>
+</html>
+
